@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15
+    container_name: sportshop-db
+    environment:
+      POSTGRES_USER: sportshop
+      POSTGRES_PASSWORD: sportshop
+      POSTGRES_DB: sportshop
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Microservices will be added later
+
+volumes:
+  postgres_data:
