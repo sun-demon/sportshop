@@ -1,0 +1,7 @@
+{
+  "name": "@sportshop/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for backend and frontend",
+  "types": "index.ts",
+  "private": true
+}
