@@ -1,7 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt.utils';
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+    iat: number;
+    exp: number;
+  } | undefined;
+}
+
+export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
   
   if (!token) {
@@ -13,7 +23,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
   
-  // Добавляем информацию о пользователе в запрос
-  (req as any).user = decoded;
+  // Adding user information to the request
+  req.user = decoded as AuthRequest['user'];
   next();
 };
