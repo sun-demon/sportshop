@@ -6,7 +6,7 @@ import swaggerUi from 'swagger-ui-express';
 
 import prisma from './db/client';
 import authRoutes from './routes/auth.routes';
-import { swaggerSpec } from './swagger';
+import { swaggerSpec } from './config/swagger';
 import { validateEnv, checkJwtSecret, getPort } from './config/env';
 import { setupGracefulShutdown } from './utils/shutdown';
 
