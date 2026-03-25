@@ -1,7 +1,18 @@
 import { Request, Response } from 'express';
-import { createUser, findUserByEmail, validatePassword } from '../services/auth.service';
-import { generateToken } from '../utils/jwt.utils';
+import type { 
+  RegisterRequest, 
+  LoginRequest, 
+  AuthResponse
+} from '@sportshop/shared-types';
+
 import { VALIDATION } from '../constants/validation.constants';
+import { 
+  createUser, 
+  findUserByEmail,
+  validatePassword,
+  toIUser 
+} from '../services/auth.service';
+import { generateToken } from '../utils/jwt.utils';
 
 // Auxiliary validation functions
 const isValidEmail = (email: string): boolean => {
@@ -14,7 +25,7 @@ const isValidPassword = (password: string): boolean => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    let { email, password, name } = req.body;
+    let { email, password, name } = req.body as RegisterRequest;
 
     // Checking for required fields
     if (!email || !password) {
@@ -61,10 +72,10 @@ export const register = async (req: Request, res: Response) => {
     // Token generation
     const token = generateToken(user.id, user.email, user.role);
     
-    // We are not sending the password
-    const { password: _, ...userWithoutPassword } = user;
+    // Response with shared-types
+    const response: AuthResponse = { user, token };
     
-    res.status(201).json({ user: userWithoutPassword, token });
+    res.status(201).json(response);
   } catch (error) {
     console.error('Registration error:', error); // logging for ourselves
     res.status(500).json({ message: 'Registration failed' });
@@ -73,7 +84,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    let { email, password } = req.body;
+    let { email, password } = req.body as LoginRequest;
 
     // Checking for required fields
     if (!email || !password) {
@@ -99,26 +110,28 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid email format' });
     }
     
-    
-    // User search
-    const user = await findUserByEmail(email);
-    if (!user) {
+    // Find user with password for verification
+    const userWithPassword = await findUserByEmail(email);
+    if (!userWithPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
     // Password verification
-    const isValid = await validatePassword(password, user.password);
+    const isValid = await validatePassword(password, userWithPassword.password);
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+
+    // Get public user data (without password, with ISO strings)
+    const user =toIUser(userWithPassword);
     
     // Token generation
     const token = generateToken(user.id, user.email, user.role);
     
-    // We are not sending the password
-    const { password: _, ...userWithoutPassword } = user;
+    // Response with shared-types
+    const response: AuthResponse = { user, token };
     
-    res.json({ user: userWithoutPassword, token });
+    res.json(response);
   } catch (error) {
     console.error('Authorization error:', error); // logging for ourselves
     res.status(500).json({ message: 'Login failed' });
