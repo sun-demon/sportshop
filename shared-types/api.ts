@@ -1,4 +1,4 @@
-import { IUserWithoutPassword } from './user';
+import { IUser } from './user';
 import { IProduct } from './product';
 import { IOrder } from './order';
 
@@ -15,7 +15,7 @@ export interface LoginRequest {
 }
 
 export interface AuthResponse {
-  user: IUserWithoutPassword;
+  user: IUser;
   token: string;
 }
 

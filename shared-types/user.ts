@@ -6,5 +6,3 @@ export interface IUser {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface IUserWithoutPassword extends IUser {}
