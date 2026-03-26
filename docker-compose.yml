@@ -19,23 +19,23 @@ services:
       timeout: 5s
       retries: 5
 
-  # product-db:
-  #   image: postgres:15
-  #   container_name: product-db
-  #   environment:
-  #     POSTGRES_USER: sportshop
-  #     POSTGRES_PASSWORD: sportshop
-  #     POSTGRES_DB: product_db
-  #   ports:
-  #     - "5433:5432"
-  #   volumes:
-  #     - product-db-data:/var/lib/postgresql/data
-  #   restart: always
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U sportshop -d product_db"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
+  product-db:
+    image: postgres:15
+    container_name: product-db
+    environment:
+      POSTGRES_USER: sportshop
+      POSTGRES_PASSWORD: sportshop
+      POSTGRES_DB: product_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - product-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sportshop -d product_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # order-db:
   #   image: postgres:15
@@ -75,23 +75,23 @@ services:
     volumes:
       - ./shared-types:/app/shared-types
 
-  # product:
-  #   build: 
-  #     context: .
-  #     dockerfile: services/product/Dockerfile
-  #   container_name: product-service
-  #   ports:
-  #     - "3002:3002"
-  #   environment:
-  #     DATABASE_URL: postgresql://sportshop:sportshop@product-db:5432/product_db
-  #     JWT_SECRET: ${JWT_SECRET}
-  #     NODE_ENV: production
-  #   depends_on:
-  #     product-db:
-  #       condition: service_healthy
-  #   restart: always
-  #   volumes:
-  #     - ./shared-types:/app/shared-types
+  product:
+    build: 
+      context: .
+      dockerfile: services/product/Dockerfile
+    container_name: product-service
+    ports:
+      - "3002:3002"
+    environment:
+      DATABASE_URL: postgresql://sportshop:sportshop@product-db:5432/product_db
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+    depends_on:
+      product-db:
+        condition: service_healthy
+    restart: always
+    volumes:
+      - ./shared-types:/app/shared-types
 
   # order:
   #   build: ./services/order
