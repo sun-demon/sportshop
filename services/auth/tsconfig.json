@@ -4,7 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2020"],
     "outDir": "./dist",
-    "rootDir": "../..",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,9 +16,9 @@
     "declarationMap": true,
     "types": ["node"],
     "paths": {
-      "@sportshop/shared-types": ["../../shared-types"]
+      "@sportshop/shared-types": ["./src/shared-types"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "../../shared-types"]
+  "exclude": ["node_modules"]
 }

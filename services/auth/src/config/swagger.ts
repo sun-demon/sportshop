@@ -1,4 +1,7 @@
 import swaggerJsdoc from 'swagger-jsdoc';
+import path from 'path';
+
+const isDev = process.env.NODE_ENV !== 'production';
 
 const options = {
   definition: {
@@ -126,7 +129,9 @@ const options = {
       },
     },
   },
-  apis: ['./src/routes/*.ts'], // paths to annotated files
+  apis: isDev 
+    ? ['./src/routes/*.ts']   // local development
+    : [path.join(__dirname, '../routes/*.js')], // Docker (compiled files)
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
