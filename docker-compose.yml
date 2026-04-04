@@ -74,6 +74,7 @@ services:
     restart: always
     volumes:
       - ./shared-types:/app/shared-types
+    command: sh -c "npx prisma db push && node dist/index.js"
 
   product:
     build: 
@@ -92,6 +93,7 @@ services:
     restart: always
     volumes:
       - ./shared-types:/app/shared-types
+    command: sh -c "npx prisma db push && node dist/index.js"
 
   order:
     build: 
@@ -110,6 +112,20 @@ services:
     restart: always
     volumes:
       - ./shared-types:/app/shared-types
+    command: sh -c "npx prisma db push && node dist/main.js"
+
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - auth
+      - product
+      - order
+    restart: always
 
 volumes:
   auth-db-data:
