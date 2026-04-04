@@ -12,14 +12,22 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.enableCors();
   
+  // ==================== HEALTH CHECK (hidden from Swagger) ==================== 
+  app.getHttpAdapter().get('/health', (req, res) => { 
+    res.json({ status: 'OK', service: 'order' }); 
+  });
+
+  // ==================== SWAGGER ====================
   const config = new DocumentBuilder()
     .setTitle('Order Service API')
     .setDescription('Order management for Sportshop')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-    
   const document = SwaggerModule.createDocument(app, config);
+  app.getHttpAdapter().get('/api-docs/json', (req, res) => {
+    res.json(document);
+  });
   SwaggerModule.setup('api-docs', app, document);
   
   const port = process.env.PORT || 3003;

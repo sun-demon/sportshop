@@ -4,7 +4,7 @@ import { AuthGuard } from '../guards/auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateOrderDto, UpdateOrderStatusDto } from '../dtos';
 
-@ApiTags('orders')
+@ApiTags('Orders')
 @Controller('orders')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}

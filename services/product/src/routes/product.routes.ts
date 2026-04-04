@@ -7,7 +7,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   // Public: List of products
   fastify.get('/', {
     schema: {
-      description: 'Get all products',
+      summary: 'Get all products',
       tags: ['Products'],
       response: {
         200: {
@@ -24,7 +24,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   // Public: one product
   fastify.get('/:id', {
     schema: {
-      description: 'Get a product by ID',
+      summary: 'Get a product by ID',
       tags: ['Products'],
       params: {
         type: 'object',
@@ -68,7 +68,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: IProductCreate }>('/', {
     preHandler: [fastify.authenticate],
     schema: {
-      description: 'Create a new product',
+      summary: 'Create a new product',
       tags: ['Products'],
       security: [{ bearerAuth: [] }],
       body: {
@@ -129,7 +129,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.put<{ Params: { id: string }; Body: Partial<IProductCreate> }>('/:id', {
     preHandler: [fastify.authenticate],
     schema: {
-      description: 'Update a product',
+      summary: 'Update a product',
       tags: ['Products'],
       security: [{ bearerAuth: [] }],
       params: {
@@ -211,7 +211,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.delete<{ Params: { id: string } }>('/:id', {
     preHandler: [fastify.authenticate],
     schema: {
-      description: 'Delete a product',
+      summary: 'Delete a product',
       tags: ['Products'],
       security: [{ bearerAuth: [] }],
       params: {

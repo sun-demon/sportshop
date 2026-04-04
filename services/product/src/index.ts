@@ -88,6 +88,9 @@ const start = async () => {
   });
   await fastify.register(authPlugin);
 
+  // ==================== HEALTH (hidden) ===================
+  fastify.get('/health', async () => ({ status: 'OK', service: 'product' }));
+
   // ==================== SWAGGER ====================
   await fastify.register(swagger, {
     openapi: {
@@ -115,6 +118,7 @@ const start = async () => {
   routePrefix: '/api-docs',
   uiConfig: {
     docExpansion: 'list',
+    defaultModelExpandDepth: 1,
   },
   theme: {
     favicon: [
@@ -142,8 +146,6 @@ const start = async () => {
   
   // ==================== ROUTES ====================
   await fastify.register(productRoutes, { prefix: '/products' });
-
-  fastify.get('/health', async () => ({ status: 'OK', service: 'product' }));
 
   // ==================== SERVER ====================
   const PORT = getPort();
