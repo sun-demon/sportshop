@@ -137,3 +137,23 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Login failed' });
   }
 };
+
+export const getMe = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    
+    const userData = await findUserByEmail(user.email);
+    if (!userData) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const { password: _, ...userWithoutPassword } = userData;
+    res.json(userWithoutPassword);
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({ message: 'Failed to get user info' });
+  }
+};
