@@ -5,8 +5,8 @@ export interface IOrderItem {
   id: number;
   productId: number;
   quantity: number;
-  price: number; // цена на момент заказа
-  product?: IProduct; // опционально для расширенной информации
+  price: number; // price at the time of the order
+  product?: IProduct; // optional for extended information
 }
 
 export interface IOrder {
@@ -17,7 +17,7 @@ export interface IOrder {
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: string;
   updatedAt: string;
-  user?: IUser; // опционально для расширенной информации
+  user?: IUser; // optional for extended information
 }
 
 export interface IOrderCreate {
