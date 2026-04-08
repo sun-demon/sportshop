@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/auth.controller';
+import { register, login, getMe } from '../controllers/auth.controller';
+import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -66,5 +67,25 @@ router.post('/register', register);
  *         description: Server error
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current user info
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User info retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/me', authenticate, getMe);
 
 export default router;
