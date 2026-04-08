@@ -1,0 +1,623 @@
+{
+  "info": {
+    "name": "Sportshop API",
+    "description": "Testing the Sportshop Microservices Architecture",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "sportshop-collection-final"
+  },
+  "item": [
+    {
+      "name": "🏗️ Setup",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.environment.get('adminEmail')) {",
+                  "  pm.environment.set('adminEmail', 'admin@test.com');",
+                  "}",
+                  "if (!pm.environment.get('adminPassword')) {",
+                  "  console.warn('⚠️ ADMIN_PASSWORD not set in environment');",
+                  "  console.warn('   Run: ./scripts/sync-postman-env.sh to sync password');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Response has token', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('token');",
+                  "  pm.environment.set('accessToken', jsonData.token);",
+                  "  if (jsonData.user && jsonData.user.id) {",
+                  "    pm.environment.set('userId', jsonData.user.id);",
+                  "  }",
+                  "  console.log('✅ Admin token set');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current Admin Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Admin has correct email and role', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('email', pm.environment.get('adminEmail'));",
+                  "  pm.expect(jsonData).to.have.property('role', 'admin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get or Create Test Product",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (pm.environment.get('productId')) {",
+                  "  console.log('✅ Product already exists, ID:', pm.environment.get('productId'));",
+                  "  return;",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const productId = pm.response.json().id;",
+                  "  pm.environment.set('productId', productId);",
+                  "  console.log('✅ Test product created, ID:', productId);",
+                  "} else if (pm.response.code === 403) {",
+                  "  console.error('❌ Forbidden: Make sure admin is logged in');",
+                  "} else if (pm.response.code === 409) {",
+                  "  console.log('⚠️ Product already exists, fetching existing...');",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get('baseUrl') + '/products',",
+                  "    method: 'GET'",
+                  "  }, (err, res) => {",
+                  "    const products = res.json();",
+                  "    if (products.length > 0) {",
+                  "      pm.environment.set('productId', products[0].id);",
+                  "      console.log('✅ Using existing product, ID:', products[0].id);",
+                  "    }",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Product for Orders\",\n  \"price\": 99.99,\n  \"stock\": 10,\n  \"category\": \"Test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Auth Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log('Auth Health Status:', status);",
+                  "pm.test('Auth health status is 200', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Auth health response has correct service', () => {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('service', 'auth');",
+                  "    pm.expect(jsonData).to.have.property('status', 'OK');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrlAuth}}/health", "host": ["{{baseUrlAuth}}"], "path": ["health"]}
+          }
+        },
+        {
+          "name": "Register Regular User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => { pm.response.to.have.status(201); });",
+                  "pm.test('Response has user and token', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('user');",
+                  "  pm.expect(jsonData).to.have.property('token');",
+                  "  console.log('✅ Regular user created');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user{{$timestamp}}@test.com\",\n  \"password\": \"pass123\",\n  \"name\": \"Regular User\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Product Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log('Product Health Status:', status);",
+                  "pm.test('Product health status is 200', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Product health response has correct service', () => {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('service', 'product');",
+                  "    pm.expect(jsonData).to.have.property('status', 'OK');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrlProduct}}/health", "host": ["{{baseUrlProduct}}"], "path": ["health"]}
+          }
+        },
+        {
+          "name": "Get All Products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Response is array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"]}
+          }
+        },
+        {
+          "name": "Create Product (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => { pm.response.to.have.status(201); });",
+                  "pm.test('Product created', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('id');",
+                  "  pm.environment.set('productId', jsonData.id);",
+                  "  console.log('✅ Product ID set:', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Product {{$timestamp}}\",\n  \"price\": 99.99,\n  \"stock\": 10,\n  \"category\": \"Test\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"]}
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Product found', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('id', parseInt(pm.environment.get('productId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"]}
+          }
+        },
+        {
+          "name": "Update Product (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Price updated', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.price).to.equal(149.99);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"price\": 149.99\n}"},
+            "url": {"raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"]}
+          }
+        },
+        {
+          "name": "Delete Product (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 204', () => { pm.response.to.have.status(204); });",
+                  "console.log('✅ Product deleted');",
+                  "pm.environment.set('productId', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Order Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log('Order Health Status:', status);",
+                  "pm.test('Order health status is 200', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Order health response has correct service', () => {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('service', 'order');",
+                  "    pm.expect(jsonData).to.have.property('status', 'OK');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrlOrder}}/health", "host": ["{{baseUrlOrder}}"], "path": ["health"]}
+          }
+        },
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "let productId = pm.environment.get('productId');",
+                  "",
+                  "if (!productId) {",
+                  "    console.log('⚠️ productId not found, fetching from products list...');",
+                  "    ",
+                  "    const request = {",
+                  "        url: pm.variables.get('baseUrl') + '/products',",
+                  "        method: 'GET',",
+                  "        header: {",
+                  "            'Authorization': 'Bearer ' + pm.environment.get('accessToken')",
+                  "        }",
+                  "    };",
+                  "    ",
+                  "    pm.sendRequest(request, (err, res) => {",
+                  "        if (err) {",
+                  "            console.error('Failed to fetch products:', err);",
+                  "            return;",
+                  "        }",
+                  "        ",
+                  "        const products = res.json();",
+                  "        if (products && products.length > 0) {",
+                  "            productId = products[0].id;",
+                  "            pm.environment.set('productId', productId);",
+                  "            console.log('✅ productId obtained from products list:', productId);",
+                  "        } else {",
+                  "            console.error('❌ No products found. Please create a product first.');",
+                  "        }",
+                  "    });",
+                  "} else {",
+                  "    console.log('✅ Using existing productId:', productId);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const status = pm.response.code;",
+                  "console.log('Create Order Response Status:', status);",
+                  "",
+                  "pm.test('Status code is 201', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (status === 201) {",
+                  "    const orderId = pm.response.json().id;",
+                  "    pm.environment.set('orderId', orderId);",
+                  "    console.log('✅ Order created, ID:', orderId);",
+                  "} else if (status === 400) {",
+                  "    console.error('❌ Bad request. Response body:', pm.response.text());",
+                  "} else if (status === 401) {",
+                  "    console.error('❌ Unauthorized. Check accessToken');",
+                  "} else if (status === 403) {",
+                  "    console.error('❌ Forbidden. Admin role required');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get My Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Response is array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/orders/my", "host": ["{{baseUrl}}"], "path": ["orders", "my"]}
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Order found', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('id', parseInt(pm.environment.get('orderId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}"]}
+          }
+        },
+        {
+          "name": "Get All Orders (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Response is array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"]}
+          }
+        },
+        {
+          "name": "Update Order Status (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Status updated', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.status).to.equal('shipped');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"shipped\"\n}"},
+            "url": {"raw": "{{baseUrl}}/orders/{{orderId}}/status", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}", "status"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚪 API Gateway",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Response has gateway and services', () => {",
+                  "  const jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('gateway');",
+                  "  pm.expect(jsonData).to.have.property('services');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"]}
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api-docs", "host": ["{{baseUrl}}"], "path": ["api-docs"]}
+          }
+        },
+        {
+          "name": "Swagger JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Response has openapi field', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('openapi');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api-docs/json", "host": ["{{baseUrl}}"], "path": ["api-docs", "json"]}
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "accessToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "orderId", "value": "" }
+  ]
+}
