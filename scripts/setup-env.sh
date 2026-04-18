@@ -35,6 +35,20 @@ fi
 
 echo -e "${GREEN}✅ JWT_SECRET generated successfully${NC}"
 
+# Generate REFRESH_SECRET (can be same as JWT_SECRET or different)
+echo -e "${GREEN}🔑 Generating REFRESH_SECRET...${NC}"
+REFRESH_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+
+if [ -z "$REFRESH_SECRET" ]; then 
+    REFRESH_SECRET=$(openssl rand -hex 32 2>/dev/null)
+    if [ -z "$REFRESH_SECRET" ]; then 
+        echo -e "${YELLOW}⚠️ Using JWT_SECRET as REFRESH_SECRET${NC}"
+        REFRESH_SECRET="$JWT_SECRET"
+    fi
+fi
+
+echo -e "${GREEN}✅ REFRESH_SECRET generated successfully${NC}"
+
 # Create root .env from .env.example
 echo -e "${GREEN}📝 Creating root .env from .env.example...${NC}"
 sed "s/JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET}/" .env.example > .env
@@ -48,6 +62,7 @@ echo -e "${GREEN}📝 Creating auth/.env from .env.example...${NC}"
 mkdir -p services/auth
 if [ -f services/auth/.env.example ]; then 
     sed -e "s/JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET}/" \
+        -e "s/REFRESH_SECRET=.*/REFRESH_SECRET=${REFRESH_SECRET}/" \
         -e "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${ADMIN_PASSWORD}/" \
         services/auth/.env.example > services/auth/.env 
     echo -e "${GREEN} ✅ auth/.env created${NC}"
@@ -87,6 +102,7 @@ fi
 echo ""
 echo -e "${GREEN}✅ Environment setup complete!${NC}"
 echo -e "${YELLOW}📋 JWT_SECRET: ${JWT_SECRET}${NC}"
+echo -e "${YELLOW}📋 REFRESH_SECRET: ${REFRESH_SECRET}${NC}"
 echo -e "${YELLOW}🔐 Admin credentials: admin@test.com / ${ADMIN_PASSWORD}${NC}"
 echo ""
 echo -e "Next steps:"

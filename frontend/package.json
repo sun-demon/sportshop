@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sportshop/shared-types": "file:../shared-types",
+    "@sportshop/shared-types": "file:./shared-types",
     "axios": "^1.7.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

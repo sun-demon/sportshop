@@ -8,6 +8,21 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Переменные для обновления токена
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> = [];
+
+const processQueue = (error: unknown | null, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Добавляем токен к запросам
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
@@ -17,12 +32,61 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Обработка 401 и обновление токена
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        }).catch(err => Promise.reject(err));
+      }
+      
+      originalRequest._retry = true;
+      isRefreshing = true;
+      
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      try {
+        const { data } = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken });
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+        processQueue(null, data.accessToken);
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Auth
 export const login = (email: string, password: string) =>
-  api.post<{ user: IUser; token: string }>('/auth/login', { email, password });
+  api.post<{ user: IUser; accessToken: string; refreshToken: string }>('/auth/login', { email, password });
 
 export const register = (email: string, password: string, name?: string) =>
-  api.post<{ user: IUser; token: string }>('/auth/register', { email, password, name });
+  api.post<{ user: IUser; accessToken: string; refreshToken: string }>('/auth/register', { email, password, name });
+
+export const refreshToken = (refreshToken: string) =>
+  api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken });
+
+export const logout = (refreshToken: string) =>
+  api.post('/auth/logout', { refreshToken });
 
 export const getMe = () => api.get<IUser>('/auth/me');
 

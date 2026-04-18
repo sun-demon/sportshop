@@ -1,19 +1,32 @@
 import { useCart } from '../../hooks/useCart';
 import { useNavigate } from 'react-router-dom';
 import { createOrder } from '../../services/api';
+import { useState } from 'react';
 
 export default function Cart() {
   const { items, removeFromCart, updateQuantity, total, clearCart } = useCart();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleCheckout = async () => {
-    const orderItems = items.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity,
-    }));
-    await createOrder(orderItems);
-    clearCart();
-    navigate('/orders');
+    setLoading(true);
+    setError('');
+    
+    try {
+      const orderItems = items.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      }));
+      await createOrder(orderItems);
+      clearCart();
+      navigate('/orders');
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      setError(err.response?.data?.message || 'Ошибка при оформлении заказа');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (items.length === 0) {
@@ -28,6 +41,11 @@ export default function Cart() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Корзина</h1>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+          {error}
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1">
           {items.map((item) => (
@@ -43,6 +61,7 @@ export default function Cart() {
                 <button
                   onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                   className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
+                  disabled={loading}
                 >
                   -
                 </button>
@@ -50,6 +69,7 @@ export default function Cart() {
                 <button
                   onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                   className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300"
+                  disabled={loading}
                 >
                   +
                 </button>
@@ -59,6 +79,7 @@ export default function Cart() {
                 <button
                   onClick={() => removeFromCart(item.product.id)}
                   className="text-red-500 text-sm hover:underline"
+                  disabled={loading}
                 >
                   Удалить
                 </button>
@@ -81,9 +102,10 @@ export default function Cart() {
             </div>
             <button
               onClick={handleCheckout}
-              className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition"
+              disabled={loading}
+              className="w-full mt-6 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition disabled:opacity-50"
             >
-              Оформить заказ
+              {loading ? 'Оформление...' : 'Оформить заказ'}
             </button>
           </div>
         </div>
