@@ -127,6 +127,15 @@ services:
       - order
     restart: always
 
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    restart: always
+
 volumes:
   auth-db-data:
   product-db-data:
