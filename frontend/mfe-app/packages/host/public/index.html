@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sportshop</title>
+  <!--
+    Этот скрипт выполняется ДО загрузки webpack-бандлов.
+    Он перехватывает ScriptExternalLoadError от недоступных MFE раньше,
+    чем webpack-dev-server успевает показать свой оверлей.
+  -->
+  <script>
+    (function () {
+      function isMfeError(msg) {
+        if (!msg) return false;
+        return (
+          msg.indexOf('Loading script failed') !== -1 ||
+          msg.indexOf('ScriptExternalLoadError') !== -1 ||
+          msg.indexOf('ChunkLoadError') !== -1 ||
+          msg.indexOf('Loading chunk') !== -1 ||
+          msg.indexOf('remoteEntry') !== -1 ||
+          msg.indexOf('Failed to fetch') !== -1 ||
+          msg.indexOf('Load failed') !== -1
+        );
+      }
+
+      // Синхронные ошибки (ScriptExternalLoadError при инициализации MF)
+      window.addEventListener('error', function (event) {
+        var msg = (event.message || '') + (event.error && event.error.message ? event.error.message : '');
+        if (isMfeError(msg)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true); // capture: true — перехватываем раньше всех остальных обработчиков
+
+      // Promise rejection (на всякий случай)
+      window.addEventListener('unhandledrejection', function (event) {
+        var msg = event.reason && event.reason.message ? event.reason.message : String(event.reason || '');
+        if (isMfeError(msg)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+    })();
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>

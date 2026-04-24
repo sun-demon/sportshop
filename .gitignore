@@ -33,3 +33,4 @@ postman/*environment.json
 
 # Newman test result file
 test-results.json
+".claude/" 

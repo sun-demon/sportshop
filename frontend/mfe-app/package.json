@@ -1,0 +1,16 @@
+{
+  "name": "sportshop-mfe",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "concurrently \"npm run start -w @sportshop/host\" \"npm run start -w @sportshop/catalog\" \"npm run start -w @sportshop/orders\"",
+    "build": "npm run build -w @sportshop/webpack-config && npm run build -w @sportshop/catalog && npm run build -w @sportshop/orders && npm run build -w @sportshop/host",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
