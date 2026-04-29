@@ -13,8 +13,8 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-md">
+    <div className="min-h-screen flex flex-col bg-gray-100">
+      <header className="bg-white shadow-md flex-shrink-0">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link to="/" className="text-2xl font-bold text-blue-600">
             🏪 Sportshop
@@ -65,10 +65,12 @@ export default function Layout() {
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-8">
+      
+      <main className="flex-grow container mx-auto px-4 py-8">
         <Outlet />
       </main>
-      <footer className="bg-white shadow-inner py-4 text-center text-gray-500 text-sm">
+      
+      <footer className="bg-white shadow-inner py-4 text-center text-gray-500 text-sm flex-shrink-0">
         © 2026 Sportshop. Все права защищены.
       </footer>
     </div>
