@@ -127,6 +127,21 @@ services:
       - order
     restart: always
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: frontend
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api-gateway
+    restart: always
+    volumes:
+      - ./shared-types:/app/shared-types
+
 volumes:
   auth-db-data:
   product-db-data:

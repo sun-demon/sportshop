@@ -9,10 +9,15 @@ import { VALIDATION } from '../constants/validation.constants';
 import { 
   createUser, 
   findUserByEmail,
+  findUserById,
   validatePassword,
-  toIUser 
+  toIUser,
+  saveRefreshToken,
+  findRefreshToken,
+  deleteRefreshToken,
+  deleteAllUserRefreshTokens
 } from '../services/auth.service';
-import { generateToken } from '../utils/jwt.utils';
+import { generateToken, generateRefreshToken, verifyToken, verifyRefreshToken } from '../utils/jwt.utils';
 
 // Auxiliary validation functions
 const isValidEmail = (email: string): boolean => {
@@ -69,15 +74,21 @@ export const register = async (req: Request, res: Response) => {
     // Creating a user
     const user = await createUser(email, password, name);
     
-    // Token generation
-    const token = generateToken(user.id, user.email, user.role);
+    // Generate tokens
+    const accessToken = generateToken(user.id, user.email, user.role);
+    const refreshToken = generateRefreshToken(user.id);
+    
+    // Save refresh token to database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+    await saveRefreshToken(user.id, refreshToken, expiresAt);
     
     // Response with shared-types
-    const response: AuthResponse = { user, token };
+    const response: any = { user, accessToken, refreshToken };
     
     res.status(201).json(response);
   } catch (error) {
-    console.error('Registration error:', error); // logging for ourselves
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Registration failed' });
   }
 };
@@ -91,13 +102,12 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Email length limitation (protection against attacks)
+    // Email length limitation
     if (email.length > VALIDATION.EMAIL.MAX_LENGTH) {
-      return res.status(400).json({ message: 'Invalid email format' }); // we do not specify the reason
+      return res.status(400).json({ message: 'Invalid email format' });
     }
     
-    // We do NOT limit the length of the password in the login
-    // (or we limit it reasonably, for example 1000, so as not to consume memory)
+    // Reasonable limit for password in login
     if (password.length > VALIDATION.LOGIN.MAX_PASSWORD_LENGTH) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -122,19 +132,97 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Get public user data (without password, with ISO strings)
-    const user =toIUser(userWithPassword);
+    // Delete old refresh tokens
+    await deleteAllUserRefreshTokens(userWithPassword.id);
     
-    // Token generation
-    const token = generateToken(user.id, user.email, user.role);
+    // Get public user data
+    const user = toIUser(userWithPassword);
     
-    // Response with shared-types
-    const response: AuthResponse = { user, token };
+    // Generate tokens
+    const accessToken = generateToken(user.id, user.email, user.role);
+    const refreshToken = generateRefreshToken(user.id);
     
-    res.json(response);
+    // Save refresh token to database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await saveRefreshToken(user.id, refreshToken, expiresAt);
+    
+    // Response
+    res.json({ user, accessToken, refreshToken });
   } catch (error) {
-    console.error('Authorization error:', error); // logging for ourselves
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Login failed' });
+  }
+};
+
+export const refresh = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(401).json({ message: 'Refresh token required' });
+    }
+    
+    // Check if refresh token exists in database
+    const storedToken = await findRefreshToken(refreshToken);
+    if (!storedToken) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+    
+    // Check if token is expired
+    if (storedToken.expiresAt < new Date()) {
+      await deleteRefreshToken(refreshToken);
+      return res.status(401).json({ message: 'Refresh token expired' });
+    }
+    
+    // Verify JWT signature
+    const decoded = verifyRefreshToken(refreshToken);
+    if (!decoded || typeof decoded === 'string') {
+      await deleteRefreshToken(refreshToken);
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+    
+    // Get user
+    const user = await findUserById(decoded.id);
+    if (!user) {
+      await deleteRefreshToken(refreshToken);
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    // Delete old refresh token
+    await deleteRefreshToken(refreshToken);
+    
+    // Generate new tokens
+    const newAccessToken = generateToken(user.id, user.email, user.role);
+    const newRefreshToken = generateRefreshToken(user.id);
+    
+    // Save new refresh token
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await saveRefreshToken(user.id, newRefreshToken, expiresAt);
+    
+    res.json({ 
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    });
+  } catch (error) {
+    console.error('Refresh error:', error);
+    res.status(500).json({ message: 'Refresh failed' });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (refreshToken) {
+      await deleteRefreshToken(refreshToken);
+    }
+    
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ message: 'Logout failed' });
   }
 };
 
@@ -150,8 +238,7 @@ export const getMe = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    const { password: _, ...userWithoutPassword } = userData;
-    res.json(userWithoutPassword);
+    res.json(toIUser(userData));
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ message: 'Failed to get user info' });
