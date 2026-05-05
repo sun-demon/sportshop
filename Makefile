@@ -18,6 +18,7 @@ env:
 
 up:
 	docker compose up -d --build
+	./scripts/setup-admin.sh
 
 down:
 	docker compose down
@@ -25,9 +26,11 @@ down:
 reset:
 	docker compose down -v --remove-orphans
 	docker compose up -d --build
+	./scripts/setup-admin.sh
 
 restart:
 	docker compose restart
+	./scripts/setup-admin.sh
 
 logs:
 	docker compose logs -f

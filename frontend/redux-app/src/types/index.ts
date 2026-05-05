@@ -50,6 +50,7 @@ export interface IOrder {
 export interface AuthResponse {
   user: IUser;
   token: string;
+  refreshToken?: string;
 }
 
 export interface LoginRequest {

@@ -1,12 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getMyOrders } from '../services/api';
 import type { IOrder } from '@sportshop/shared-types';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateProfile, sendFeedback } = useAuth();
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +42,39 @@ export default function ProfilePage() {
     cancelled: 'Отменён',
   };
 
+  async function handleProfileSubmit(e: FormEvent) {
+    e.preventDefault();
+    setProfileMessage(null);
+    try {
+      await updateProfile({
+        name: name.trim() || undefined,
+        email: email.trim() || undefined,
+        password: password.trim() || undefined,
+      });
+      setName('');
+      setEmail('');
+      setPassword('');
+      setProfileMessage('Профиль обновлён');
+    } catch (err) {
+      const eResp = err as { response?: { data?: { message?: string } } };
+      setProfileMessage(eResp.response?.data?.message ?? 'Не удалось обновить профиль');
+    }
+  }
+
+  async function handleFeedbackSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFeedbackMessage(null);
+    try {
+      await sendFeedback({ subject: subject.trim(), message: message.trim() });
+      setSubject('');
+      setMessage('');
+      setFeedbackMessage('Сообщение отправлено разработчику');
+    } catch (err) {
+      const eResp = err as { response?: { data?: { message?: string } } };
+      setFeedbackMessage(eResp.response?.data?.message ?? 'Не удалось отправить сообщение');
+    }
+  }
+
   return (
     <div className="container">
       <h1>Профиль</h1>
@@ -61,6 +101,40 @@ export default function ProfilePage() {
             <div className="stat-value">{deliveredCount}</div>
             <div className="stat-label">Доставлено</div>
           </div>
+        </div>
+        <div className="profile-section">
+          <h3>Редактирование профиля</h3>
+          {profileMessage && <div className="alert alert-info">{profileMessage}</div>}
+          <form onSubmit={handleProfileSubmit}>
+            <div className="form-group">
+              <label htmlFor="profile-name">Имя</label>
+              <input id="profile-name" className="form-control" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="profile-email">Email</label>
+              <input id="profile-email" type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="profile-password">Новый пароль</label>
+              <input id="profile-password" type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <button className="btn btn-primary" type="submit">Сохранить</button>
+          </form>
+        </div>
+        <div className="profile-section">
+          <h3>Обратная связь разработчику</h3>
+          {feedbackMessage && <div className="alert alert-info">{feedbackMessage}</div>}
+          <form onSubmit={handleFeedbackSubmit}>
+            <div className="form-group">
+              <label htmlFor="feedback-subject">Тема</label>
+              <input id="feedback-subject" className="form-control" value={subject} onChange={(e) => setSubject(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="feedback-message">Сообщение</label>
+              <textarea id="feedback-message" className="form-control" value={message} onChange={(e) => setMessage(e.target.value)} required rows={4} />
+            </div>
+            <button className="btn btn-outline" type="submit">Отправить</button>
+          </form>
         </div>
         <div className="profile-section">
           <h3>Последние заказы</h3>

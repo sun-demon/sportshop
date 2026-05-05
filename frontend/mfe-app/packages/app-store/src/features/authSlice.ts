@@ -3,38 +3,61 @@ import type { IUser } from '../types';
 
 interface AuthState {
   user: IUser | null;
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
 }
+
+const readAccessToken = () => localStorage.getItem('accessToken') ?? localStorage.getItem('token');
+const readRefreshToken = () => localStorage.getItem('refreshToken');
 
 const initialState: AuthState = {
   user: null,
-  token: typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null,
+  accessToken: typeof localStorage !== 'undefined' ? readAccessToken() : null,
+  refreshToken: typeof localStorage !== 'undefined' ? readRefreshToken() : null,
 };
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials(state, action: PayloadAction<{ user: IUser; token: string }>) {
+    setCredentials(state, action: PayloadAction<{ user: IUser; token: string; refreshToken?: string }>) {
       state.user = action.payload.user;
-      state.token = action.payload.token;
-      localStorage.setItem('token', action.payload.token);
+      state.accessToken = action.payload.token;
+      state.refreshToken = action.payload.refreshToken ?? null;
+      localStorage.setItem('accessToken', action.payload.token);
+      localStorage.removeItem('token');
+      if (action.payload.refreshToken) localStorage.setItem('refreshToken', action.payload.refreshToken);
+    },
+    setTokens(state, action: PayloadAction<{ accessToken: string | null; refreshToken?: string | null }>) {
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken ?? state.refreshToken;
+      if (action.payload.accessToken) localStorage.setItem('accessToken', action.payload.accessToken);
+      else localStorage.removeItem('accessToken');
+      localStorage.removeItem('token');
+      if (action.payload.refreshToken !== undefined) {
+        if (action.payload.refreshToken) localStorage.setItem('refreshToken', action.payload.refreshToken);
+        else localStorage.removeItem('refreshToken');
+      }
     },
     setUser(state, action: PayloadAction<IUser>) {
       state.user = action.payload;
     },
     logout(state) {
       state.user = null;
-      state.token = null;
+      state.accessToken = null;
+      state.refreshToken = null;
+      localStorage.removeItem('accessToken');
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
     },
   },
 });
 
-export const { setCredentials, setUser, logout } = authSlice.actions;
+export const { setCredentials, setTokens, setUser, logout } = authSlice.actions;
 export default authSlice.reducer;
 
 export const selectCurrentUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectToken = (state: { auth: AuthState }) => state.auth.token;
-export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.token !== null;
+export const selectToken = (state: { auth: AuthState }) => state.auth.accessToken;
+export const selectRefreshToken = (state: { auth: AuthState }) => state.auth.refreshToken;
+export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.accessToken !== null;
 export const selectIsAdmin = (state: { auth: AuthState }) => state.auth.user?.role === 'admin';

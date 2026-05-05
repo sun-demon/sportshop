@@ -17,7 +17,7 @@ export default function LoginPage() {
     setError('');
     try {
       const result = await login({ email, password }).unwrap();
-      dispatch(setCredentials({ user: result.user, token: result.token }));
+      dispatch(setCredentials({ user: result.user, token: result.token, refreshToken: result.refreshToken }));
       navigate('/');
     } catch (err: unknown) {
       setError((err as { data?: { message?: string } })?.data?.message ?? 'Неверный email или пароль');

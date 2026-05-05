@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, refresh, logout, getMe } from '../controllers/auth.controller';
+import { register, login, refresh, logout, getMe, updateMe, feedback } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -125,5 +125,7 @@ router.post('/logout', logout);
  *         description: Unauthorized
  */
 router.get('/me', authenticate, getMe);
+router.patch('/me', authenticate, updateMe);
+router.post('/feedback', authenticate, feedback);
 
 export default router;

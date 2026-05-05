@@ -16,7 +16,7 @@ export default function RegisterPage() {
     setError('');
     try {
       const result = await register({ name, email, password }).unwrap();
-      dispatch(setCredentials({ user: result.user, token: result.token }));
+      dispatch(setCredentials({ user: result.user, token: result.token, refreshToken: result.refreshToken }));
       navigate('/');
     } catch (err: unknown) {
       setError((err as { data?: { message?: string } })?.data?.message ?? 'Ошибка регистрации');

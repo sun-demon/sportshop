@@ -32,7 +32,10 @@ const authLimiter = rateLimit({
 app.use(morgan('dev'));
 app.use(cors());
 app.use(express.json());
-app.use('/auth', authLimiter);
+// Limit only mutation-heavy auth endpoints; /auth/me should stay responsive.
+app.use('/auth/login', authLimiter);
+app.use('/auth/register', authLimiter);
+app.use('/auth/refresh', authLimiter);
 
 // ==================== SWAGGER ====================
 app.get('/api-docs/json', (req, res) => {

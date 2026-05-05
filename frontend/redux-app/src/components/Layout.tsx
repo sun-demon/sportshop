@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store';
-import { logout, selectCurrentUser, selectIsAuthenticated, setUser } from '../features/authSlice';
+import { logout, selectCurrentUser, selectIsAuthenticated, setTokens, setUser } from '../features/authSlice';
 import { selectCartCount } from '../features/cartSlice';
-import { sportshopApi, useGetMeQuery } from '../api/sportshopApi';
+import { sportshopApi, useGetMeQuery, useLogoutMutation } from '../api/sportshopApi';
 import FloatingAppTag from './FloatingAppTag';
 
 export default function Layout() {
@@ -13,6 +13,7 @@ export default function Layout() {
   // user берётся из двух мест: authSlice И RTK Query getMe (одни данные в двух частях приложения)
   const user = useAppSelector(selectCurrentUser);
   const cartCount = useAppSelector(selectCartCount);
+  const [logoutRequest] = useLogoutMutation();
 
   const { data: meData } = useGetMeQuery(undefined, { skip: !isAuthenticated });
 
@@ -20,7 +21,46 @@ export default function Layout() {
     if (meData) dispatch(setUser(meData));
   }, [meData, dispatch]);
 
-  function handleLogout() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const incomingAccessToken = params.get('accessToken');
+    const incomingRefreshToken = params.get('refreshToken');
+    if (incomingAccessToken) {
+      localStorage.setItem('accessToken', incomingAccessToken);
+      localStorage.removeItem('token');
+      if (incomingRefreshToken) localStorage.setItem('refreshToken', incomingRefreshToken);
+      else localStorage.removeItem('refreshToken');
+      dispatch(setTokens({ accessToken: incomingAccessToken, refreshToken: incomingRefreshToken }));
+      const nextUrl = `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'accessToken' && e.key !== 'refreshToken' && e.key !== 'token') return;
+      const accessToken = localStorage.getItem('accessToken') ?? localStorage.getItem('token');
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!accessToken) {
+        dispatch(logout());
+        dispatch(sportshopApi.util.resetApiState());
+        return;
+      }
+      dispatch(setTokens({ accessToken, refreshToken }));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [dispatch]);
+
+  async function handleLogout() {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        await logoutRequest({ refreshToken }).unwrap();
+      } catch {
+        // Do not block local logout on network/API failure.
+      }
+    }
     dispatch(logout());
     dispatch(sportshopApi.util.resetApiState());
     navigate('/login');

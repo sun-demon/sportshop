@@ -4,7 +4,8 @@ import type { AuthResponse, IUser, LoginRequest, RegisterRequest } from '../type
 
 export class AuthStore {
   user: IUser | null = null;
-  token: string | null = localStorage.getItem('token');
+  token: string | null = localStorage.getItem('accessToken') ?? localStorage.getItem('token');
+  refreshToken: string | null = localStorage.getItem('refreshToken');
   isLoading = false;
   /** true пока грузим /auth/me (нужно для admin-only маршрутов после F5) */
   isFetchingUser = false;
@@ -29,9 +30,12 @@ export class AuthStore {
       runInAction(() => {
         const t = res.data.accessToken;
         this.token = t;
+        this.refreshToken = res.data.refreshToken ?? null;
         this.user = res.data.user;
         this.userFetchedAt = Date.now();
-        localStorage.setItem('token', t);
+        localStorage.setItem('accessToken', t);
+        localStorage.removeItem('token');
+        if (res.data.refreshToken) localStorage.setItem('refreshToken', res.data.refreshToken);
       });
     } catch (err: unknown) {
       runInAction(() => { this.error = this.extractMessage(err) ?? 'Неверный email или пароль'; });
@@ -46,9 +50,12 @@ export class AuthStore {
       runInAction(() => {
         const t = res.data.accessToken;
         this.token = t;
+        this.refreshToken = res.data.refreshToken ?? null;
         this.user = res.data.user;
         this.userFetchedAt = Date.now();
-        localStorage.setItem('token', t);
+        localStorage.setItem('accessToken', t);
+        localStorage.removeItem('token');
+        if (res.data.refreshToken) localStorage.setItem('refreshToken', res.data.refreshToken);
       });
     } catch (err: unknown) {
       runInAction(() => { this.error = this.extractMessage(err) ?? 'Ошибка регистрации'; });
@@ -70,8 +77,46 @@ export class AuthStore {
     }
   }
 
-  logout() {
-    this.user = null; this.token = null; this.userFetchedAt = null; localStorage.removeItem('token');
+  async logout() {
+    const refreshToken = this.refreshToken ?? localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        await client.post('/auth/logout', { refreshToken });
+      } catch {
+        // Do not block local logout on network/API failure.
+      }
+    }
+    this.user = null;
+    this.token = null;
+    this.refreshToken = null;
+    this.userFetchedAt = null;
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+  }
+
+  async updateProfile(data: { email?: string; name?: string; password?: string }) {
+    const res = await client.patch<AuthResponse>('/auth/me', data);
+    runInAction(() => {
+      this.user = res.data.user;
+      this.token = res.data.accessToken;
+      this.refreshToken = res.data.refreshToken ?? null;
+      this.userFetchedAt = Date.now();
+      localStorage.setItem('accessToken', res.data.accessToken);
+      localStorage.removeItem('token');
+      if (res.data.refreshToken) localStorage.setItem('refreshToken', res.data.refreshToken);
+      else localStorage.removeItem('refreshToken');
+    });
+  }
+
+  async sendFeedback(data: { subject: string; message: string }) {
+    await client.post('/auth/feedback', data);
+  }
+
+  syncFromStorage() {
+    this.token = localStorage.getItem('accessToken') ?? localStorage.getItem('token');
+    this.refreshToken = localStorage.getItem('refreshToken');
+    if (!this.token) this.user = null;
   }
 
   clearError() { this.error = null; }

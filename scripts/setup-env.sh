@@ -55,7 +55,13 @@ sed "s/JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET}/" .env.example > .env
 
 # Generate admin password (random, but show to user)
 ADMIN_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(8).toString('hex'))")
+ADMIN_EMAIL="admin@test.com"
+ADMIN_NAME="Administrator"
 echo -e "${GREEN}🔑 Generated admin password: ${ADMIN_PASSWORD}${NC}"
+echo "REFRESH_SECRET=${REFRESH_SECRET}" >> .env
+echo "ADMIN_EMAIL=${ADMIN_EMAIL}" >> .env
+echo "ADMIN_PASSWORD=${ADMIN_PASSWORD}" >> .env
+echo "ADMIN_NAME=${ADMIN_NAME}" >> .env
 
 # Create .env for authentication
 echo -e "${GREEN}📝 Creating auth/.env from .env.example...${NC}"
@@ -63,10 +69,12 @@ mkdir -p services/auth
 if [ -f services/auth/.env.example ]; then 
     sed -e "s/JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET}/" \
         -e "s/REFRESH_SECRET=.*/REFRESH_SECRET=${REFRESH_SECRET}/" \
+        -e "s/ADMIN_EMAIL=.*/ADMIN_EMAIL=${ADMIN_EMAIL}/" \
         -e "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${ADMIN_PASSWORD}/" \
+        -e "s/ADMIN_NAME=.*/ADMIN_NAME=${ADMIN_NAME}/" \
         services/auth/.env.example > services/auth/.env 
     echo -e "${GREEN} ✅ auth/.env created${NC}"
-    echo -e "   📋 Admin login: admin@test.com / ${ADMIN_PASSWORD}"
+    echo -e "   📋 Admin login: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}"
 else 
     echo -e "${RED}⚠️ services/auth/.env.example not found, skipping${NC}"
 fi
@@ -103,7 +111,7 @@ echo ""
 echo -e "${GREEN}✅ Environment setup complete!${NC}"
 echo -e "${YELLOW}📋 JWT_SECRET: ${JWT_SECRET}${NC}"
 echo -e "${YELLOW}📋 REFRESH_SECRET: ${REFRESH_SECRET}${NC}"
-echo -e "${YELLOW}🔐 Admin credentials: admin@test.com / ${ADMIN_PASSWORD}${NC}"
+echo -e "${YELLOW}🔐 Admin credentials: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}${NC}"
 echo ""
 echo -e "Next steps:"
 echo -e " ${GREEN}docker compose up -d${NC} — запуск сервисов (product-сервис после db push выполняет prisma db seed — демо-картинки товаров)"

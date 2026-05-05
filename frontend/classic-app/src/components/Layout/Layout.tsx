@@ -70,7 +70,7 @@ export default function Layout() {
       </main>
       <FloatingAppTag label="classic" current="classic" />
       <footer className="footer" role="contentinfo">
-        <p>© 2026 Sportshop — React + контекст</p>
+        <p>© 2026 Sportshop — React + Context API</p>
       </footer>
     </div>
   );

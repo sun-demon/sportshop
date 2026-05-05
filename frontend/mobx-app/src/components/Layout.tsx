@@ -15,8 +15,36 @@ const Layout = observer(() => {
     if (auth.isAuthenticated) auth.fetchMe();
   }, [auth.isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleLogout() {
-    auth.logout(); orders.clearOrders(); products.clearSelected(); cart.clear(); navigate('/login');
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const incomingAccessToken = params.get('accessToken');
+    const incomingRefreshToken = params.get('refreshToken');
+    if (incomingAccessToken) {
+      localStorage.setItem('accessToken', incomingAccessToken);
+      localStorage.removeItem('token');
+      if (incomingRefreshToken) localStorage.setItem('refreshToken', incomingRefreshToken);
+      else localStorage.removeItem('refreshToken');
+      auth.syncFromStorage();
+      const nextUrl = `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'accessToken' && e.key !== 'refreshToken' && e.key !== 'token') return;
+      auth.syncFromStorage();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleLogout() {
+    await auth.logout();
+    orders.clearOrders();
+    products.clearSelected();
+    cart.clear();
+    navigate('/login');
   }
 
   return (

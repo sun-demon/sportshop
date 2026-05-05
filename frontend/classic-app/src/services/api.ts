@@ -39,8 +39,14 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl: string = originalRequest?.url ?? '';
+    const isAuthEndpoint =
+      requestUrl.includes('/auth/login')
+      || requestUrl.includes('/auth/register')
+      || requestUrl.includes('/auth/refresh')
+      || requestUrl.includes('/auth/logout');
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -91,6 +97,10 @@ export const logout = (refreshToken: string) =>
   api.post('/auth/logout', { refreshToken });
 
 export const getMe = () => api.get<IUser>('/auth/me');
+export const updateMe = (data: { email?: string; name?: string; password?: string }) =>
+  api.patch<{ user: IUser; accessToken: string; refreshToken: string }>('/auth/me', data);
+export const sendFeedback = (data: { subject: string; message: string }) =>
+  api.post<{ message: string }>('/auth/feedback', data);
 
 // Products
 export const getProducts = () => api.get<IProduct[]>('/products');

@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import type {
   AuthResponse,
   IOrder,
@@ -8,25 +9,64 @@ import type {
   LoginRequest,
   RegisterRequest,
 } from '../types';
+import { logout, setTokens } from '../features/authSlice';
 
 /** Ответ API после refresh-токенов: в store остаётся поле `token` для Authorization */
 function normalizeAuthResponse(raw: AuthResponse | (AuthResponse & { accessToken: string })): AuthResponse {
-  const r = raw as { user: IUser; token?: string; accessToken?: string };
+  const r = raw as { user: IUser; token?: string; accessToken?: string; refreshToken?: string };
   const token = r.accessToken ?? r.token;
   if (!token) throw new Error('Auth response missing accessToken');
-  return { user: r.user, token };
+  return { user: r.user, token, refreshToken: r.refreshToken };
 }
+
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: '/',
+  prepareHeaders: (headers, { getState }) => {
+    const token = (getState() as { auth: { accessToken: string | null } }).auth.accessToken;
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return headers;
+  },
+});
+
+const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+  args,
+  api,
+  extraOptions,
+) => {
+  let result = await rawBaseQuery(args, api, extraOptions);
+  if (result.error?.status !== 401) return result;
+
+  const state = api.getState() as { auth: { refreshToken: string | null } };
+  const refreshToken = state.auth.refreshToken ?? localStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    api.dispatch(logout());
+    return result;
+  }
+
+  const refreshResult = await rawBaseQuery(
+    { url: '/auth/refresh', method: 'POST', body: { refreshToken } },
+    api,
+    extraOptions,
+  );
+  if (!refreshResult.data) {
+    api.dispatch(logout());
+    return result;
+  }
+
+  const data = refreshResult.data as { accessToken?: string; refreshToken?: string };
+  if (!data.accessToken) {
+    api.dispatch(logout());
+    return result;
+  }
+
+  api.dispatch(setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken ?? null }));
+  result = await rawBaseQuery(args, api, extraOptions);
+  return result;
+};
 
 export const sportshopApi = createApi({
   reducerPath: 'sportshopApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: '/',
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as { auth: { token: string | null } }).auth.token;
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithReauth,
   tagTypes: ['Product', 'Order', 'User'],
   endpoints: (builder) => ({
     login: builder.mutation<AuthResponse, LoginRequest>({
@@ -36,6 +76,16 @@ export const sportshopApi = createApi({
     register: builder.mutation<AuthResponse, RegisterRequest>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
       transformResponse: normalizeAuthResponse,
+    }),
+    updateMe: builder.mutation<AuthResponse, { email?: string; name?: string; password?: string }>({
+      query: (body) => ({ url: '/auth/me', method: 'PATCH', body }),
+      transformResponse: normalizeAuthResponse,
+    }),
+    logout: builder.mutation<{ message?: string }, { refreshToken: string }>({
+      query: (body) => ({ url: '/auth/logout', method: 'POST', body }),
+    }),
+    sendFeedback: builder.mutation<{ message: string }, { subject: string; message: string }>({
+      query: (body) => ({ url: '/auth/feedback', method: 'POST', body }),
     }),
     getMe: builder.query<IUser, void>({
       query: () => '/auth/me',
@@ -99,6 +149,9 @@ export const sportshopApi = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useUpdateMeMutation,
+  useLogoutMutation,
+  useSendFeedbackMutation,
   useGetMeQuery,
   useGetProductsQuery,
   useGetProductQuery,

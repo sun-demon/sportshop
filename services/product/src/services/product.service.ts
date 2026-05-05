@@ -3,6 +3,29 @@ import { Product as PrismaProduct } from '@prisma/client';
 import prisma from '../db/client';
 import type { IProduct, IProductCreate } from '@sportshop/shared-types';
 
+const CATEGORY_FALLBACK_IMAGE: Record<string, string> = {
+  'Сила': '/products/assets/products/strength.png',
+  'Кардио': '/products/assets/products/cardio.png',
+  'Йога': '/products/assets/products/yoga.png',
+  'Командные': '/products/assets/products/team-sports.png',
+  'Аксессуары': '/products/assets/products/accessories.png',
+  'Функционал': '/products/assets/products/functional.png',
+  'Восстановление': '/products/assets/products/recovery.png',
+  'Единоборства': '/products/assets/products/mma.png',
+};
+
+const DEFAULT_FALLBACK_IMAGE = '/products/assets/products/strength.png';
+
+function normalizeImageUrl(imageUrl: string | null, category: string): string {
+  if (!imageUrl) return CATEGORY_FALLBACK_IMAGE[category] ?? DEFAULT_FALLBACK_IMAGE;
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+  if (imageUrl.startsWith('/products/assets/')) return imageUrl;
+  if (imageUrl.startsWith('/assets/')) return `/products${imageUrl}`;
+  if (imageUrl.startsWith('products/')) return `/${imageUrl}`;
+  if (imageUrl.startsWith('assets/')) return `/products/${imageUrl}`;
+  return imageUrl;
+}
+
 // Helper: Convert Prisma Product to IProduct
 const toIProduct = (product: PrismaProduct): IProduct => ({
   id: product.id,
@@ -11,7 +34,7 @@ const toIProduct = (product: PrismaProduct): IProduct => ({
   price: product.price,
   stock: product.stock,
   category: product.category,
-  imageUrl: product.imageUrl,
+  imageUrl: normalizeImageUrl(product.imageUrl, product.category),
   createdAt: product.createdAt.toISOString(),
   updatedAt: product.updatedAt.toISOString(),
 });

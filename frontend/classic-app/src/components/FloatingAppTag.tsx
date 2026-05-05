@@ -74,7 +74,13 @@ export default function FloatingAppTag({ label, current }: Props) {
   }, []);
 
   function targetUrl(port: string): string {
-    return port === '80' ? `${originBase}/` : `${originBase}:${port}/`;
+    const base = port === '80' ? `${originBase}/` : `${originBase}:${port}/`;
+    const url = new URL(base);
+    const accessToken = localStorage.getItem('accessToken') ?? localStorage.getItem('token');
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (accessToken) url.searchParams.set('accessToken', accessToken);
+    if (refreshToken) url.searchParams.set('refreshToken', refreshToken);
+    return url.toString();
   }
 
   function openHere(port: string) {

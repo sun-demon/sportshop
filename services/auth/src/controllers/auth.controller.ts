@@ -15,7 +15,9 @@ import {
   saveRefreshToken,
   findRefreshToken,
   deleteRefreshToken,
-  deleteAllUserRefreshTokens
+  deleteAllUserRefreshTokens,
+  updateUserProfile,
+  updateUserPassword
 } from '../services/auth.service';
 import { generateToken, generateRefreshToken, verifyToken, verifyRefreshToken } from '../utils/jwt.utils';
 
@@ -242,5 +244,100 @@ export const getMe = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ message: 'Failed to get user info' });
+  }
+};
+
+export const updateMe = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user as { id: number } | undefined;
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { email, name, password } = req.body as { email?: string; name?: string; password?: string };
+    const normalizedEmail = email?.toLowerCase().trim();
+    const normalizedName = typeof name === 'string' ? name.trim() : name;
+
+    if (normalizedEmail !== undefined) {
+      if (!normalizedEmail) return res.status(400).json({ message: 'Email cannot be empty' });
+      if (normalizedEmail.length > VALIDATION.EMAIL.MAX_LENGTH) {
+        return res.status(400).json({ message: `Email must be less than ${VALIDATION.EMAIL.MAX_LENGTH} characters` });
+      }
+      if (!isValidEmail(normalizedEmail)) return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    if (normalizedName !== undefined && normalizedName.length > VALIDATION.NAME.MAX_LENGTH) {
+      return res.status(400).json({ message: `Name must be less than ${VALIDATION.NAME.MAX_LENGTH} characters` });
+    }
+
+    if (password !== undefined) {
+      if (!password) return res.status(400).json({ message: 'Password cannot be empty' });
+      if (password.length > VALIDATION.PASSWORD.MAX_LENGTH || !isValidPassword(password)) {
+        return res.status(400).json({
+          message: 'Password must be at least 6 characters and contain both letters and numbers'
+        });
+      }
+    }
+
+    if (normalizedEmail !== undefined) {
+      const existing = await findUserByEmail(normalizedEmail);
+      if (existing && existing.id !== user.id) {
+        return res.status(409).json({ message: 'User with this email already exists' });
+      }
+    }
+
+    const profileUpdateData: { email?: string; name?: string | null } = {};
+    if (normalizedEmail !== undefined) profileUpdateData.email = normalizedEmail;
+    if (normalizedName !== undefined) profileUpdateData.name = normalizedName || null;
+    const updatedUser = await updateUserProfile(user.id, profileUpdateData);
+
+    if (password !== undefined) {
+      await updateUserPassword(user.id, password);
+      await deleteAllUserRefreshTokens(user.id);
+    }
+
+    const accessToken = generateToken(updatedUser.id, updatedUser.email, updatedUser.role);
+    const refreshToken = generateRefreshToken(updatedUser.id);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await saveRefreshToken(updatedUser.id, refreshToken, expiresAt);
+
+    return res.json({ user: updatedUser, accessToken, refreshToken });
+  } catch (error) {
+    console.error('Update me error:', error);
+    return res.status(500).json({ message: 'Failed to update profile' });
+  }
+};
+
+export const feedback = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user as { id: number; email: string } | undefined;
+    if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+    const { subject, message } = req.body as { subject?: string; message?: string };
+    const normalizedSubject = (subject ?? '').trim();
+    const normalizedMessage = (message ?? '').trim();
+    if (!normalizedSubject || !normalizedMessage) {
+      return res.status(400).json({ message: 'Subject and message are required' });
+    }
+    if (normalizedSubject.length > 120) {
+      return res.status(400).json({ message: 'Subject must be less than 120 characters' });
+    }
+    if (normalizedMessage.length > 2000) {
+      return res.status(400).json({ message: 'Message must be less than 2000 characters' });
+    }
+
+    console.info('[developer-feedback]', {
+      userId: user.id,
+      userEmail: user.email,
+      subject: normalizedSubject,
+      message: normalizedMessage,
+      createdAt: new Date().toISOString(),
+    });
+
+    return res.status(201).json({ message: 'Feedback sent successfully' });
+  } catch (error) {
+    console.error('Feedback error:', error);
+    return res.status(500).json({ message: 'Failed to send feedback' });
   }
 };

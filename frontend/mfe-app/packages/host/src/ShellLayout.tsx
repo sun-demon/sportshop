@@ -6,10 +6,12 @@ import {
   selectCurrentUser,
   selectIsAuthenticated,
   setUser,
+  setTokens,
   sportshopApi,
   useAppDispatch,
   useAppSelector,
   useGetMeQuery,
+  useLogoutMutation,
 } from '@sportshop/mfe-store';
 import FloatingAppTag from './FloatingAppTag';
 
@@ -19,6 +21,7 @@ export default function ShellLayout() {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const user = useAppSelector(selectCurrentUser);
   const cartCount = useAppSelector(selectCartCount);
+  const [logoutRequest] = useLogoutMutation();
 
   const { data: meData } = useGetMeQuery(undefined, { skip: !isAuthenticated });
 
@@ -26,7 +29,46 @@ export default function ShellLayout() {
     if (meData) dispatch(setUser(meData));
   }, [meData, dispatch]);
 
-  function handleLogout() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const incomingAccessToken = params.get('accessToken');
+    const incomingRefreshToken = params.get('refreshToken');
+    if (incomingAccessToken) {
+      localStorage.setItem('accessToken', incomingAccessToken);
+      localStorage.removeItem('token');
+      if (incomingRefreshToken) localStorage.setItem('refreshToken', incomingRefreshToken);
+      else localStorage.removeItem('refreshToken');
+      dispatch(setTokens({ accessToken: incomingAccessToken, refreshToken: incomingRefreshToken }));
+      const nextUrl = `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'accessToken' && e.key !== 'refreshToken' && e.key !== 'token') return;
+      const accessToken = localStorage.getItem('accessToken') ?? localStorage.getItem('token');
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!accessToken) {
+        dispatch(logout());
+        dispatch(sportshopApi.util.resetApiState());
+        return;
+      }
+      dispatch(setTokens({ accessToken, refreshToken }));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [dispatch]);
+
+  async function handleLogout() {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        await logoutRequest({ refreshToken }).unwrap();
+      } catch {
+        // Do not block local logout on network/API failure.
+      }
+    }
     dispatch(logout());
     dispatch(sportshopApi.util.resetApiState());
     navigate('/login');

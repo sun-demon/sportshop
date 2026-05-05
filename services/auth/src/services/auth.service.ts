@@ -78,3 +78,22 @@ export const deleteAllUserRefreshTokens = async (userId: number) => {
     where: { userId },
   });
 };
+
+export const updateUserProfile = async (userId: number, data: { email?: string; name?: string | null }) => {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(data.email !== undefined ? { email: data.email } : {}),
+      ...(data.name !== undefined ? { name: data.name } : {}),
+    },
+  });
+  return toIUser(user);
+};
+
+export const updateUserPassword = async (userId: number, password: string) => {
+  const hashedPassword = await bcrypt.hash(password, 10);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword },
+  });
+};
