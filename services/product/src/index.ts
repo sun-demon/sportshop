@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import path from 'path';
@@ -85,6 +86,10 @@ const start = async () => {
   // ==================== PLUGINS ====================
   await fastify.register(cors, {
     origin: true,
+  });
+  await fastify.register(fastifyStatic, {
+    root: path.join(process.cwd(), 'public'),
+    prefix: '/products/assets/',
   });
   await fastify.register(authPlugin);
 

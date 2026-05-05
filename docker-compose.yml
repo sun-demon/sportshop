@@ -93,7 +93,7 @@ services:
     restart: always
     volumes:
       - ./shared-types:/app/shared-types
-    command: sh -c "npx prisma db push && node dist/index.js"
+    command: sh -c "npx prisma db push && npx prisma db seed && node dist/index.js"
 
   order:
     build: 
@@ -130,8 +130,8 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
-    container_name: frontend
+      dockerfile: frontend/classic-app/Dockerfile
+    container_name: classic-frontend
     ports:
       - "80:80"
     environment:
@@ -141,6 +141,83 @@ services:
     restart: always
     volumes:
       - ./shared-types:/app/shared-types
+
+  frontend-redux:
+    build:
+      context: .
+      dockerfile: frontend/redux-app/Dockerfile
+    container_name: redux-frontend
+    ports:
+      - "8081:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api-gateway
+    restart: always
+
+  frontend-mobx:
+    build:
+      context: .
+      dockerfile: frontend/mobx-app/Dockerfile
+    container_name: mobx-frontend
+    ports:
+      - "8082:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api-gateway
+    restart: always
+
+  mfe-catalog:
+    build:
+      context: .
+      dockerfile: frontend/mfe-app/Dockerfile
+    container_name: mfe-catalog
+    command: sh -c "npm run dev -w @sportshop/mfe-catalog -- --host 0.0.0.0"
+    ports:
+      - "4201:4201"
+    environment:
+      - NODE_ENV=development
+      - MFE_API_GATEWAY_URL=http://api-gateway:3000
+      - MFE_PUBLIC_ORIGIN=http://localhost
+    depends_on:
+      - api-gateway
+    restart: always
+
+  mfe-orders:
+    build:
+      context: .
+      dockerfile: frontend/mfe-app/Dockerfile
+    container_name: mfe-orders
+    command: sh -c "npm run dev -w @sportshop/mfe-orders -- --host 0.0.0.0"
+    ports:
+      - "4202:4202"
+    environment:
+      - NODE_ENV=development
+      - MFE_API_GATEWAY_URL=http://api-gateway:3000
+      - MFE_PUBLIC_ORIGIN=http://localhost
+    depends_on:
+      - api-gateway
+    restart: always
+
+  mfe-host:
+    build:
+      context: .
+      dockerfile: frontend/mfe-app/Dockerfile
+    container_name: mfe-host
+    command: sh -c "npm run dev -w @sportshop/mfe-host -- --host 0.0.0.0"
+    ports:
+      - "8083:4200"
+    environment:
+      - NODE_ENV=development
+      - MFE_API_GATEWAY_URL=http://api-gateway:3000
+      - MFE_PUBLIC_ORIGIN=http://localhost
+      - MFE_REMOTE_ORIGIN=http://localhost
+    depends_on:
+      - api-gateway
+      - mfe-catalog
+      - mfe-orders
+    restart: always
 
 volumes:
   auth-db-data:

@@ -12,6 +12,7 @@ RUN npm install
 
 # Copy source code
 COPY services/product/src ./src
+COPY services/product/public ./public
 COPY services/product/tsconfig.json ./
 
 # Copy shared-types
@@ -39,6 +40,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/public ./public
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 -G nodejs

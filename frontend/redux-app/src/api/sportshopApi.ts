@@ -5,6 +5,13 @@ import type {
   IUser, LoginRequest, RegisterRequest,
 } from '../types';
 
+function normalizeAuthResponse(raw: AuthResponse | (AuthResponse & { accessToken: string })): AuthResponse {
+  const r = raw as { user: IUser; token?: string; accessToken?: string };
+  const token = r.accessToken ?? r.token;
+  if (!token) throw new Error('Auth response missing accessToken');
+  return { user: r.user, token };
+}
+
 // RTK Query автоматически кэширует результаты.
 // keepUnusedDataFor — секунды хранения данных после размонтирования компонента.
 // providesTags / invalidatesTags — инвалидация кэша при мутациях.
@@ -24,9 +31,11 @@ export const sportshopApi = createApi({
     // Auth
     login: builder.mutation<AuthResponse, LoginRequest>({
       query: (body) => ({ url: '/auth/login', method: 'POST', body }),
+      transformResponse: normalizeAuthResponse,
     }),
     register: builder.mutation<AuthResponse, RegisterRequest>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
+      transformResponse: normalizeAuthResponse,
     }),
     getMe: builder.query<IUser, void>({
       query: () => '/auth/me',

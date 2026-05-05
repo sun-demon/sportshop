@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes';
 import { swaggerSpec } from './config/swagger';
 import { validateEnv, checkJwtSecret, getPort } from './config/env';
 import { setupGracefulShutdown } from './utils/shutdown';
+import { ensureAdminUser } from './utils/bootstrap';
 
 // ==================== ENVIRONMENT ====================
 validateEnv();
@@ -47,10 +48,16 @@ app.get('/health', (req, res) => {
 });
 
 // ==================== SERVER ====================
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Auth service running on port ${PORT}`);
-  console.log(`📚 Swagger docs available at http://localhost:${PORT}/api-docs`);
-});
+async function startServer() {
+  await ensureAdminUser();
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Auth service running on port ${PORT}`);
+    console.log(`📚 Swagger docs available at http://localhost:${PORT}/api-docs`);
+  });
+  setupGracefulShutdown(server, prisma);
+}
 
-// ==================== GRACEFUL SHUTDOWN ====================
-setupGracefulShutdown(server, prisma);
+startServer().catch((error) => {
+  console.error('❌ Failed to start auth service:', error);
+  process.exit(1);
+});

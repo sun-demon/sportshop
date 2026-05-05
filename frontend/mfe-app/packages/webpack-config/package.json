@@ -1,0 +1,10 @@
+{
+  "name": "@sportshop/webpack-mfe-config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.cjs",
+  "peerDependencies": {
+    "html-webpack-plugin": "^5.0.0",
+    "webpack": "^5.0.0"
+  }
+}

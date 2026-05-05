@@ -6,6 +6,8 @@ export class AuthStore {
   user: IUser | null = null;
   token: string | null = localStorage.getItem('token');
   isLoading = false;
+  /** true пока грузим /auth/me (нужно для admin-only маршрутов после F5) */
+  isFetchingUser = false;
   error: string | null = null;
 
   private userFetchedAt: number | null = null;
@@ -25,8 +27,11 @@ export class AuthStore {
     try {
       const res = await client.post<AuthResponse>('/auth/login', data);
       runInAction(() => {
-        this.token = res.data.token; this.user = res.data.user;
-        this.userFetchedAt = Date.now(); localStorage.setItem('token', res.data.token);
+        const t = res.data.accessToken;
+        this.token = t;
+        this.user = res.data.user;
+        this.userFetchedAt = Date.now();
+        localStorage.setItem('token', t);
       });
     } catch (err: unknown) {
       runInAction(() => { this.error = this.extractMessage(err) ?? 'Неверный email или пароль'; });
@@ -39,8 +44,11 @@ export class AuthStore {
     try {
       const res = await client.post<AuthResponse>('/auth/register', data);
       runInAction(() => {
-        this.token = res.data.token; this.user = res.data.user;
-        this.userFetchedAt = Date.now(); localStorage.setItem('token', res.data.token);
+        const t = res.data.accessToken;
+        this.token = t;
+        this.user = res.data.user;
+        this.userFetchedAt = Date.now();
+        localStorage.setItem('token', t);
       });
     } catch (err: unknown) {
       runInAction(() => { this.error = this.extractMessage(err) ?? 'Ошибка регистрации'; });
@@ -51,10 +59,15 @@ export class AuthStore {
   async fetchMe(force = false) {
     if (!this.token) return;
     if (!force && this.isUserCacheValid) return;
+    runInAction(() => { this.isFetchingUser = true; });
     try {
       const res = await client.get<IUser>('/auth/me');
       runInAction(() => { this.user = res.data; this.userFetchedAt = Date.now(); });
-    } catch { runInAction(() => { this.logout(); }); }
+    } catch {
+      runInAction(() => { this.logout(); });
+    } finally {
+      runInAction(() => { this.isFetchingUser = false; });
+    }
   }
 
   logout() {

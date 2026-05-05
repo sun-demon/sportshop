@@ -31,7 +31,16 @@ const ProductDetailPage = observer(() => {
       <Link to="/products" className="back-link">← Назад в каталог</Link>
       <div className="product-detail">
         <div className="product-detail-image">
-          {product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : <div className="product-image-placeholder large">🏋️</div>}
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.name} />
+          ) : (
+            <div className="product-image-placeholder large">
+              <span className="product-image-placeholder-icon" aria-hidden>
+                🏋️
+              </span>
+              <span className="media-caption">Демо · фото не задано</span>
+            </div>
+          )}
         </div>
         <div className="product-detail-info">
           <span className="product-category">{product.category}</span>

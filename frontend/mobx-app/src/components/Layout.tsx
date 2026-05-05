@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { useAuthStore, useCartStore, useOrderStore, useProductStore } from '../stores/StoreContext';
+import FloatingAppTag from './FloatingAppTag';
 
 const Layout = observer(() => {
   const auth = useAuthStore();
@@ -51,7 +52,8 @@ const Layout = observer(() => {
         </div>
       </nav>
       <main className="main-content"><Outlet /></main>
-      <footer className="footer"><p>© 2025 Sportshop — MobX</p></footer>
+      <FloatingAppTag label="mobx" current="mobx" />
+      <footer className="footer"><p>© 2026 Sportshop — MobX</p></footer>
     </div>
   );
 });

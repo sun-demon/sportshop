@@ -7,7 +7,12 @@ interface Props { adminOnly?: boolean; }
 const ProtectedRoute = observer(({ adminOnly = false }: Props) => {
   const auth = useAuthStore();
   if (!auth.isAuthenticated) return <Navigate to="/login" replace />;
-  if (adminOnly && !auth.isAdmin) return <Navigate to="/" replace />;
+  if (adminOnly) {
+    if (auth.isFetchingUser || auth.user === null) {
+      return <div className="loading container">Проверка прав доступа…</div>;
+    }
+    if (!auth.isAdmin) return <Navigate to="/" replace />;
+  }
   return <Outlet />;
 });
 

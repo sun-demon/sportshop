@@ -1,0 +1,14 @@
+{
+  "name": "sportshop-mfe",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n host,catalog,orders -c blue,green,magenta \"npm run dev -w @sportshop/mfe-host\" \"npm run dev -w @sportshop/mfe-catalog\" \"npm run dev -w @sportshop/mfe-orders\"",
+    "build": "npm run build -w @sportshop/mfe-host && npm run build -w @sportshop/mfe-catalog && npm run build -w @sportshop/mfe-orders"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

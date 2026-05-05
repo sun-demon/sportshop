@@ -50,7 +50,16 @@ export default function ProductsPage() {
           <div key={product.id} className="product-card">
             <Link to={`/products/${product.id}`}>
               <div className="product-image">
-                {product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : <div className="product-image-placeholder">🏋️</div>}
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} />
+                ) : (
+                  <div className="product-image-placeholder">
+                    <span className="product-image-placeholder-icon" aria-hidden>
+                      🏋️
+                    </span>
+                    <span className="media-caption">Демо · фото не задано</span>
+                  </div>
+                )}
               </div>
               <div className="product-info">
                 <span className="product-category">{product.category}</span>

@@ -43,7 +43,7 @@ fi
 
 # Check if auth service is running
 if ! curl -s http://localhost:3001/health > /dev/null; then
-    echo -e "${RED}❌ Auth service not running. Start with: docker-compose up -d${NC}"
+    echo -e "${RED}❌ Auth service not running. Start with: docker compose up -d${NC}"
     exit 1
 fi
 

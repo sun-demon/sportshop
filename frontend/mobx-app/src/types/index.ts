@@ -49,7 +49,9 @@ export interface IOrder {
 
 export interface AuthResponse {
   user: IUser;
-  token: string;
+  /** JWT с бэкенда */
+  accessToken: string;
+  refreshToken?: string;
 }
 
 export interface LoginRequest {

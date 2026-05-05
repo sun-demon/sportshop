@@ -31,10 +31,11 @@
               "script": {
                 "exec": [
                   "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
-                  "pm.test('Response has token', () => {",
+                  "pm.test('Response has access token', () => {",
                   "  const jsonData = pm.response.json();",
-                  "  pm.expect(jsonData).to.have.property('token');",
-                  "  pm.environment.set('accessToken', jsonData.token);",
+                  "  const token = jsonData.accessToken || jsonData.token;",
+                  "  pm.expect(token).to.be.a('string').and.not.empty;",
+                  "  pm.environment.set('accessToken', token);",
                   "  if (jsonData.user && jsonData.user.id) {",
                   "    pm.environment.set('userId', jsonData.user.id);",
                   "  }",
@@ -182,10 +183,11 @@
               "script": {
                 "exec": [
                   "pm.test('Status code is 201', () => { pm.response.to.have.status(201); });",
-                  "pm.test('Response has user and token', () => {",
+                  "pm.test('Response has user and access token', () => {",
                   "  const jsonData = pm.response.json();",
                   "  pm.expect(jsonData).to.have.property('user');",
-                  "  pm.expect(jsonData).to.have.property('token');",
+                  "  const token = jsonData.accessToken || jsonData.token;",
+                  "  pm.expect(token).to.be.a('string').and.not.empty;",
                   "  console.log('✅ Regular user created');",
                   "});"
                 ]

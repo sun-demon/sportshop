@@ -19,7 +19,7 @@ const ProfilePage = observer(() => {
       <h1>Профиль</h1>
       <div className="profile-layout">
         <div className="profile-card">
-          <div className="profile-avatar">{(user.name ?? user.email)[0].toUpperCase()}</div>
+          <div className="profile-avatar">{(user.name ?? user.email ?? '?').slice(0, 1).toUpperCase()}</div>
           <div className="profile-details">
             <h2>{user.name ?? '—'}</h2>
             <p className="profile-email">{user.email}</p>

@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { logout, selectCurrentUser, selectIsAuthenticated, setUser } from '../features/authSlice';
 import { selectCartCount } from '../features/cartSlice';
 import { sportshopApi, useGetMeQuery } from '../api/sportshopApi';
+import FloatingAppTag from './FloatingAppTag';
 
 export default function Layout() {
   const dispatch = useAppDispatch();
@@ -16,8 +17,8 @@ export default function Layout() {
   const { data: meData } = useGetMeQuery(undefined, { skip: !isAuthenticated });
 
   useEffect(() => {
-    if (meData && !user) dispatch(setUser(meData));
-  }, [meData, user, dispatch]);
+    if (meData) dispatch(setUser(meData));
+  }, [meData, dispatch]);
 
   function handleLogout() {
     dispatch(logout());
@@ -62,7 +63,8 @@ export default function Layout() {
         </div>
       </nav>
       <main className="main-content"><Outlet /></main>
-      <footer className="footer"><p>© 2025 Sportshop — Redux RTK</p></footer>
+      <FloatingAppTag label="redux" current="redux" />
+      <footer className="footer"><p>© 2026 Sportshop — Redux RTK</p></footer>
     </div>
   );
 }
